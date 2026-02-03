@@ -43,7 +43,7 @@ The macOS version is fully functional and tested on Apple Silicon (M-series) Mac
 |-------|-----|
 | MPS device error | Fall back to CPU (ctranslate2 doesn't support MPS) |
 | Gradio progress tracking error | Added `.queue()` before `.launch()` |
-| Speaker diarization auth error | Changed `use_auth_token` to `token` for newer huggingface_hub |
+| Speaker diarization auth error | Changed `use_auth_token` to `hf_token` (whisperx parameter name) |
 
 ## Quick Start (macOS)
 ```bash
