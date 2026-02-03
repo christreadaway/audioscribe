@@ -172,7 +172,7 @@ def transcribe(
             print("Running speaker identification...")
             try:
                 diarize_model = whisperx.DiarizationPipeline(
-                    use_auth_token=hf_token, device=device
+                    token=hf_token, device=device
                 )
                 diarize_segments = diarize_model(audio)
                 result = whisperx.assign_word_speakers(diarize_segments, result)
