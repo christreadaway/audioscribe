@@ -55,11 +55,14 @@ AUDIO_FORMATS = [".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".wma"]
 
 
 def get_device():
-    """Determine the best available device for inference."""
-    if torch.backends.mps.is_available():
-        return "mps"
-    elif torch.cuda.is_available():
+    """Determine the best available device for inference.
+
+    Note: MPS (Apple Silicon GPU) is not supported by ctranslate2/whisperx yet,
+    so we fall back to CPU on Mac. CUDA is supported for NVIDIA GPUs.
+    """
+    if torch.cuda.is_available():
         return "cuda"
+    # MPS not supported by ctranslate2, use CPU on Mac
     return "cpu"
 
 
