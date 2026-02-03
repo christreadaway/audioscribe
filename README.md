@@ -31,7 +31,7 @@ Transcribe meetings, interviews, and voice memos entirely on your computer — n
 
 ### macOS
 
-**Requirements:** macOS 10.15+, Python 3.9+ (pre-installed on most Macs)
+**Requirements:** macOS 10.15+, Python 3.11 recommended (3.9-3.12 supported; 3.13+ not yet compatible)
 
 **Step 1: Create project folder and virtual environment**
 ```bash
@@ -43,8 +43,11 @@ source .venv/bin/activate
 
 **Step 2: Install dependencies**
 ```bash
+pip install torch==2.2.0 torchaudio==2.2.0
 pip install whisperx gradio==3.50.2
 ```
+
+> **Note:** The specific torch/torchaudio versions are required for compatibility with pyannote.audio.
 
 **Step 3: Download AudioScribe**
 
