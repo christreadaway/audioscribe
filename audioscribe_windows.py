@@ -210,7 +210,7 @@ def build_ui():
                 audio_input = gr.Audio(
                     label="Upload Audio",
                     type="filepath",
-                    source="upload",
+                    sources=["upload"],
                 )
                 language = gr.Dropdown(
                     choices=["Auto-detect"] + LANGUAGES,
