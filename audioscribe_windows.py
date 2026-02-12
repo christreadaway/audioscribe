@@ -22,6 +22,18 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # ---------------------------------------------------------------------------
+# PyTorch 2.6+ changed torch.load to default weights_only=True which breaks
+# loading pyannote VAD models used by WhisperX. Patch it back to the old
+# behaviour since all models are from trusted sources.
+# ---------------------------------------------------------------------------
+import torch
+_original_torch_load = torch.load
+def _patched_torch_load(*args, **kwargs):
+    kwargs.setdefault("weights_only", False)
+    return _original_torch_load(*args, **kwargs)
+torch.load = _patched_torch_load
+
+# ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
 HOME = pathlib.Path.home()
