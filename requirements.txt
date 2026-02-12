@@ -1,0 +1,4 @@
+torch
+torchaudio
+whisperx
+gradio==3.50.2
