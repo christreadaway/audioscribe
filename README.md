@@ -63,51 +63,57 @@ Your browser will open to `http://127.0.0.1:7860` with the AudioScribe interface
 
 **Requirements:** Windows 10/11, Python 3.11, FFmpeg
 
-**Step 1: Install Python**
-1. Download Python 3.11 from [python.org](https://www.python.org/downloads/)
-2. **Important:** Check "Add Python to PATH" during installation
+> **Important:** You must use Python 3.11 specifically. Newer versions (3.12, 3.13, 3.14) are not compatible with all dependencies. The instructions below use PowerShell (the default Windows terminal).
+
+**Step 1: Install Python 3.11**
+1. Download Python 3.11 from [python.org/downloads/release/python-3119](https://www.python.org/downloads/release/python-3119/)
+2. Run the installer — **check "Add Python to PATH"** at the bottom of the first screen
+3. Verify it installed: open PowerShell and run `py -3.11 --version` (should print `Python 3.11.x`)
 
 **Step 2: Install FFmpeg**
-```cmd
+```powershell
 winget install FFmpeg
 ```
 
 **Step 3: Create project folder and virtual environment**
-```cmd
-mkdir %USERPROFILE%\audioscribe
-cd %USERPROFILE%\audioscribe
+```powershell
+mkdir $HOME\audioscribe
+cd $HOME\audioscribe
 py -3.11 -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\Activate.ps1
 ```
+
+> If you get an error about execution policy, run this first:
+> `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
 
 **Step 4: Install dependencies**
 
-*With NVIDIA GPU:*
-```cmd
-pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu118
+Make sure your virtual environment is active (you should see `(.venv)` in your prompt).
+
+*If you have an NVIDIA GPU (faster transcription):*
+```powershell
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install whisperx gradio==3.50.2
 ```
 
-*Without NVIDIA GPU (CPU only):*
-```cmd
-pip install torch==2.5.1 torchaudio==2.5.1
+*If you do NOT have an NVIDIA GPU (CPU only):*
+```powershell
+pip install torch torchaudio
 pip install whisperx gradio==3.50.2
 ```
 
 **Step 5: Download AudioScribe**
 
-Download `audioscribe_windows.py` and `AudioScribe_Windows.bat` from this repository and save them to your `audioscribe` folder.
+Download `audioscribe_windows.py` and `AudioScribe_Windows.bat` from this repository and save them to your `audioscribe` folder (e.g. `C:\Users\YourName\audioscribe\`).
 
 **Step 6: Run**
 
-Double-click `AudioScribe_Windows.bat` or run:
-```cmd
-cd %USERPROFILE%\audioscribe
-.venv\Scripts\activate
+Double-click `AudioScribe_Windows.bat`, or run from PowerShell:
+```powershell
+cd $HOME\audioscribe
+.venv\Scripts\Activate.ps1
 python audioscribe_windows.py
 ```
-
-See [README_WINDOWS.md](README_WINDOWS.md) for detailed Windows instructions and troubleshooting.
 
 ---
 
@@ -156,10 +162,14 @@ Your token is stored locally at `~/.audioscribe_token.txt` and never sent anywhe
 | Problem | Solution |
 |---------|----------|
 | `python: command not found` | Open a new terminal window, or reinstall Python with "Add to PATH" checked |
-| `No module named whisperx` | Activate the virtual environment first: `source .venv/bin/activate` (Mac) or `.venv\Scripts\activate` (Windows) |
+| `No module named whisperx` | Activate the virtual environment first: `source .venv/bin/activate` (Mac) or `.venv\Scripts\Activate.ps1` (Windows) |
+| `ERROR: No matching distribution found for torch` | You're likely on the wrong Python version. Run `py -3.11 --version` — if it fails, install Python 3.11 specifically |
+| `Defaulting to user installation` | You're not in a virtual environment. Activate it first (see Step 3 above) |
+| `metadata-generation-failed` for numpy | Wrong Python version (3.12+ has compatibility issues). Use Python 3.11 |
 | Transcription freezes | Use the `tiny` or `base` model — larger models require a GPU |
 | `ffmpeg: command not found` | Install FFmpeg: `winget install FFmpeg` (Windows) or `brew install ffmpeg` (Mac) |
 | Speaker identification hangs | This can happen on long files. The basic transcript is already saved — you can Ctrl+C safely |
+| PowerShell execution policy error | Run: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` |
 
 ---
 
