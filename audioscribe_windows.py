@@ -242,7 +242,7 @@ def build_ui():
                 output = gr.Textbox(
                     label="Transcript",
                     lines=25,
-                    show_copy_button=True,
+                    buttons=["copy"],
                 )
 
         transcribe_btn.click(
