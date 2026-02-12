@@ -210,7 +210,7 @@ def build_ui():
                 audio_input = gr.Audio(
                     label="Upload Audio",
                     type="filepath",
-                    sources=["upload"],
+                    source="upload",
                 )
                 language = gr.Dropdown(
                     choices=["Auto-detect"] + LANGUAGES,
@@ -242,7 +242,7 @@ def build_ui():
                 output = gr.Textbox(
                     label="Transcript",
                     lines=25,
-                    buttons=["copy"],
+                    show_copy_button=True,
                 )
 
         transcribe_btn.click(
