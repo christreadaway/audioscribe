@@ -380,6 +380,7 @@ def main():
         print("           brew install ffmpeg (macOS)\n")
 
     app = build_ui()
+    app.queue()
     app.launch(
         server_name="127.0.0.1",
         server_port=7860,
