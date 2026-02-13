@@ -26,6 +26,28 @@ warnings.filterwarnings("ignore")
 # ---------------------------------------------------------------------------
 import torch
 import torch.serialization
+import torchaudio
+
+# ---------------------------------------------------------------------------
+# torchaudio 2.8+ removed AudioMetaData and list_audio_backends which
+# pyannote.audio (used by WhisperX) still references.  Patch them back so
+# the diarization pipeline can load without errors.
+# ---------------------------------------------------------------------------
+if not hasattr(torchaudio, "AudioMetaData"):
+    from dataclasses import dataclass
+
+    @dataclass
+    class _AudioMetaData:
+        sample_rate: int = 0
+        num_frames: int = 0
+        num_channels: int = 0
+        bits_per_sample: int = 0
+        encoding: str = ""
+
+    torchaudio.AudioMetaData = _AudioMetaData
+
+if not hasattr(torchaudio, "list_audio_backends"):
+    torchaudio.list_audio_backends = lambda: ["ffmpeg"]
 
 _original_torch_load = (
     torch.serialization.load.__wrapped__
