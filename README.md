@@ -52,7 +52,9 @@ Download `audioscribe_mac.py` from this repository and save it to `~/audioscribe
 
 **Step 4: Run**
 ```bash
-cd ~/audioscribe && source .venv/bin/activate && python audioscribe_mac.py
+cd ~/audioscribe
+source .venv/bin/activate
+python audioscribe_mac.py
 ```
 
 Your browser will open to `http://127.0.0.1:7860` with the AudioScribe interface.
@@ -75,9 +77,14 @@ Your browser will open to `http://127.0.0.1:7860` with the AudioScribe interface
 winget install FFmpeg
 ```
 
-**Step 3: Create project folder and virtual environment**
+**Step 3: Download AudioScribe**
+
+Download **all files** from this repository (or `git clone` it) into a folder, for example `C:\Users\YourName\audioscribe\`.
+
+> **Important:** All commands below assume you are inside the project folder. Always `cd` there first.
+
+**Step 4: Create virtual environment**
 ```powershell
-mkdir $HOME\audioscribe
 cd $HOME\audioscribe
 py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -86,25 +93,24 @@ py -3.11 -m venv .venv
 > If you get an error about execution policy, run this first:
 > `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
 
-**Step 4: Install dependencies**
+**Step 5: Install dependencies**
 
 Make sure your virtual environment is active (you should see `(.venv)` in your prompt).
 
 *If you have an NVIDIA GPU (faster transcription):*
 ```powershell
+cd $HOME\audioscribe
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip install whisperx gradio==3.50.2
+pip install -r requirements.txt
 ```
 
 *If you do NOT have an NVIDIA GPU (CPU only):*
 ```powershell
-pip install torch torchaudio
-pip install whisperx gradio==3.50.2
+cd $HOME\audioscribe
+pip install -r requirements.txt
 ```
 
-**Step 5: Download AudioScribe**
-
-Download `audioscribe_windows.py` and `AudioScribe_Windows.bat` from this repository and save them to your `audioscribe` folder (e.g. `C:\Users\YourName\audioscribe\`).
+> **Can't find requirements.txt?** Make sure you're in the project root folder — run `cd $HOME\audioscribe` and try again. You should see `audioscribe_windows.py`, `AudioScribe_Windows.bat`, and `requirements.txt` when you run `dir`.
 
 **Step 6: Run**
 
