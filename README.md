@@ -77,15 +77,24 @@ Your browser will open to `http://127.0.0.1:7860` with the AudioScribe interface
 winget install FFmpeg
 ```
 
-**Step 3: Download AudioScribe**
+**Step 3: Clone or download AudioScribe**
 
-Download **all files** from this repository (or `git clone` it) into a folder, for example `C:\Users\YourName\audioscribe\`.
+```powershell
+cd $HOME
+git clone https://github.com/christreadaway/audioscribe.git
+cd audioscribe
+```
 
-> **Important:** All commands below assume you are inside the project folder. Always `cd` there first.
+> **Already have a folder called `audioscribe`?** The clone will create `audioscribe\audioscribe` (a nested folder). Either delete the outer folder first, or clone to a different name:
+> `git clone https://github.com/christreadaway/audioscribe.git audioscribe-app`
+
+After cloning, verify you're in the right place — you should see `audioscribe_windows.py` when you run `dir`:
+```powershell
+dir *.py
+```
 
 **Step 4: Create virtual environment**
 ```powershell
-cd $HOME\audioscribe
 py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
@@ -99,27 +108,30 @@ Make sure your virtual environment is active (you should see `(.venv)` in your p
 
 *If you have an NVIDIA GPU (faster transcription):*
 ```powershell
-cd $HOME\audioscribe
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
 
 *If you do NOT have an NVIDIA GPU (CPU only):*
 ```powershell
-cd $HOME\audioscribe
 pip install -r requirements.txt
 ```
 
-> **Can't find requirements.txt?** Make sure you're in the project root folder — run `cd $HOME\audioscribe` and try again. You should see `audioscribe_windows.py`, `AudioScribe_Windows.bat`, and `requirements.txt` when you run `dir`.
+> **Can't find requirements.txt?** You're in the wrong folder. Run `dir` — if you see another `audioscribe` folder instead of `.py` files, run `cd audioscribe` to go one level deeper.
 
 **Step 6: Run**
 
 Double-click `AudioScribe_Windows.bat`, or run from PowerShell:
 ```powershell
-cd $HOME\audioscribe
-.venv\Scripts\Activate.ps1
+.\AudioScribe_Windows.bat
+```
+
+Or launch directly:
+```powershell
 python audioscribe_windows.py
 ```
+
+> **Note:** PowerShell requires `.\` before `.bat` files — typing just `AudioScribe_Windows.bat` won't work.
 
 ---
 
