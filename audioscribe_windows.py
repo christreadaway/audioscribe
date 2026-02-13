@@ -173,11 +173,15 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
     if language == "Auto-detect":
         lang_code = None
 
+    token = (hf_token or "").strip() or load_token()
+
     print(f"\n{'=' * 60}")
     print(f"AudioScribe — Transcribing")
-    print(f"  Model    : {model_size}")
-    print(f"  Language : {language}")
-    print(f"  Device   : {device} ({compute_type})")
+    print(f"  Model       : {model_size}")
+    print(f"  Language    : {language}")
+    print(f"  Device      : {device} ({compute_type})")
+    print(f"  Diarization : {enable_diarization}")
+    print(f"  HF token    : {'present' if token else 'MISSING'}")
     print(f"{'=' * 60}\n")
 
     try:
@@ -211,9 +215,8 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
 
         # ---- Speaker diarization (optional) ----
         if enable_diarization:
-            token = (hf_token or "").strip() or load_token()
             if not token:
-                print("       Speaker ID skipped — no Hugging Face token.")
+                print("[4/4] Speaker ID skipped — no Hugging Face token.")
             else:
                 progress(0.75, desc="Identifying speakers...")
                 print("[4/4] Identifying speakers...")
@@ -222,11 +225,14 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
                         use_auth_token=token, device=device,
                     )
                     diarize_segments = diarize_model(audio)
+                    print(f"       Diarize segments: {len(diarize_segments)} found")
                     result = whisperx.assign_word_speakers(diarize_segments, result)
                     del diarize_model, diarize_segments
                     print("       Speaker identification complete.")
                 except Exception as e:
                     print(f"       Speaker ID failed: {e}")
+        else:
+            print("[4/4] Speaker diarization disabled — skipping.")
 
         # ---- Build transcript ----
         progress(0.9, desc="Saving transcript...")
@@ -315,7 +321,7 @@ def build_ui():
                 )
                 enable_diarization = gr.Checkbox(
                     label="Identify speakers",
-                    value=False,
+                    value=True,
                 )
 
                 with gr.Accordion("Hugging Face Token (for speaker ID)", open=False):
