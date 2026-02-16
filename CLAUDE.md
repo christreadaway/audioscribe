@@ -1,76 +1,29 @@
-# Claude Code Instructions - AudioScribe
+# AudioScribe — CLAUDE.md
 
-## About This Project
-Audio transcription tool with speaker diarization using Whisper AI. Processes audio files to generate accurate transcripts with speaker identification. Includes both Mac and Windows versions with Gradio UI for progress tracking.
+> **Repository:** `github.com/christreadaway/audioscribe`
+> **Category:** Personal
+> **Stack:** Python, Whisper, pyannote
+> **Localhost Port:** N/A
 
-## About Me (Chris Treadaway)
-Product builder, not a coder. I bring requirements and vision — you handle implementation.
+## What This Project Is
+Audio transcription tool with speaker diarization
 
-**Working with me:**
-- Bias toward action - just do it, don't argue
-- Make terminal commands dummy-proof (always start with `cd ~/audioscribe`)
-- Minimize questions - make judgment calls and tell me what you chose
-- I get interrupted frequently - always end sessions with a handoff note
+## Session Start Protocol
+Before starting ANY work:
 
-## Tech Stack
-- **Language:** Python 3.10+
-- **AI Model:** OpenAI Whisper + WhisperX for diarization
-- **UI:** Gradio for web interface
-- **Key Libraries:**
-  - whisperx (speaker diarization)
-  - gradio (progress tracking UI)
-  - torch (model inference)
-  - HuggingFace transformers
-
-## File Paths
-- **Always use:** `~/audioscribe/path/to/file`
-- **Never use:** `/Users/christreadaway/...`
-- **Always start commands with:** `cd ~/audioscribe`
-
-## PII Rules (CRITICAL)
-❌ NEVER include:
-- Real names from transcripts → use [Speaker Name]
-- File paths with /Users/christreadaway → use ~/
-- API keys/tokens in code
-
-✅ ALWAYS use placeholders
-
-## Key Features
-- Audio file upload and processing
-- Whisper AI transcription
-- Speaker diarization (who said what)
-- Progress tracking with Gradio queue
-- Output: Timestamped transcripts with speaker labels
-- Supports: Mac and Windows versions
-
-## Platform-Specific Files
-- **Mac:** `audioscribe_mac.py`
-- **Windows:** `audioscribe_windows.py` (if exists)
-- Both use same core logic, different paths/dependencies
-
-## Common Issues
-
-### HuggingFace Token Parameter Names
-WhisperX library changed parameter names across versions:
-- Old: `use_auth_token`
-- Current: `token` or `hf_token`
-
-Always use the current parameter name for the installed version.
-
-### Gradio Queue Requirement
-For progress tracking to work:
-```python
-interface.queue().launch()
-```
-Not just `.launch()` - the `.queue()` is critical.
-
-### Python Version
-Requires Python 3.10+ for type hints like `dict | None`
-
-### CUDA/GPU Support
-- Mac: Uses MPS (Metal Performance Shaders)
-- Windows: Can use CUDA if available
-- CPU fallback works but is slower
+1. Run `git fetch origin` to get latest remote state
+2. If creating a new branch, ALWAYS branch from latest `origin/main`:
+   ```
+   git fetch origin
+   git checkout -b <branch-name> origin/main
+   ```
+3. If PROJECT_STATUS.md or SESSION_NOTES.md are missing on the current branch, recover them:
+   ```
+   git checkout origin/main -- PROJECT_STATUS.md SESSION_NOTES.md 2>/dev/null || true
+   ```
+4. Read CLAUDE.md (this file) fully before starting work
+5. Read SESSION_NOTES.md if it exists — check for prior session context, blockers, and next steps
+6. Confirm the current branch and its relationship to main before making changes
 
 ## Session End Routine
 Before ending EVERY session, Claude will automatically create/update SESSION_NOTES.md:
@@ -123,71 +76,29 @@ Ready to merge: [Yes/No - why or why not]
 
 SESSION_NOTES.md is committed to the repo and tracks all session progress over time.
 
-## Git Branch Strategy
-- Claude Code creates new branch per session
-- Merge to main when tested
-- Delete merged branches
+## Project-Specific Notes
+- Audio file transcription with speaker identification
+- Windows setup and debugging workflows
+- Simplified architecture after refactoring
+- Uses Whisper for transcription, pyannote for diarization
 
-## Testing Approach
-- Test with sample audio file
-- Verify speaker diarization accuracy
-- Check progress UI updates correctly
-- Test on both Mac and Windows if possible
+## Security Requirements
+- Proactively self-evaluate for SQL injection, XSS, CSRF, auth bypasses, and other common vulnerabilities
+- Flag security issues before completing builds — do not wait to be asked
+- NEVER expose API keys, tokens, or credentials in code or committed files
+- Use .env files with .gitignore for local secrets
+- Use secrets managers or environment variables for production
 
-## Setup/Installation
+## PII Rules
+- No real institution names, people, addresses, phones, or emails in code — use [Parish Name], [Staff Name], etc.
+- No local file paths in committed code — use ~/ or environment variables
+- No API keys, tokens, or credentials in any committed files
+- These rules apply to ALL code, artifacts, files, or snippets generated
 
-### Mac
-```bash
-cd ~/audioscribe
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python audioscribe_mac.py
-```
+## User Context
+- Chris is a product builder, NOT a developer — provide detailed, dummy-proof instructions
+- When giving terminal commands, ALWAYS start with `cd` to the correct directory
+- Default to Windows paths (C:\Users\chris-treadaway\) — Chris works primarily on Windows
+- Minimize questions — make reasonable judgment calls and explain what you chose
+- Auth preference: Google Sign-In via Firebase (never username/password)
 
-### Windows
-```powershell
-cd C:\Users\chris-treadaway\audioscribe
-python -m venv venv
-.\venv\Scripts\activate
-pip install -r requirements.txt
-python audioscribe_windows.py
-```
-
-## Environment Variables
-```bash
-# HuggingFace token for model access
-HUGGINGFACE_TOKEN=hf_...
-```
-
-## Current Status
-Working on Mac. Windows setup in progress. Debug/simplify session on Feb 13, 2026.
-
----
-Last Updated: February 16, 2026
-
-
-## Session Management
-
-### Reading Past Work
-- `SESSION_NOTES.md` contains complete session history with detailed conversations
-- Read this file at session start if you need context on recent work
-- Sessions are ordered newest-first with full technical details
-
-### Ending Sessions
-At the end of each session, say:
-> "Append session notes to SESSION_NOTES.md"
-
-Claude will automatically:
-1. Generate a detailed session entry with conversation highlights
-2. Add it to the top of SESSION_NOTES.md (newest first)
-3. Include all technical work, files changed, commands used
-4. Commit the updated file
-
-### What Gets Logged
-- Conversation highlights (substantial exchanges)
-- Technical work and implementation details
-- Files modified/created
-- Commands executed
-- URLs and documentation referenced
-- Problem-solving context and decisions made
