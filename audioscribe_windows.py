@@ -49,25 +49,6 @@ if not hasattr(torchaudio, "AudioMetaData"):
 if not hasattr(torchaudio, "list_audio_backends"):
     torchaudio.list_audio_backends = lambda: ["ffmpeg"]
 
-# ---------------------------------------------------------------------------
-# pyannote.audio compatibility — some version combinations pass `token=` to
-# Inference.__init__() which doesn't accept it.  Strip the kwarg so the
-# diarization pipeline loads without errors.
-# ---------------------------------------------------------------------------
-try:
-    from pyannote.audio.core.inference import Inference as _Inference
-
-    _orig_inference_init = _Inference.__init__
-
-    def _patched_inference_init(self, *args, **kwargs):
-        kwargs.pop("token", None)
-        kwargs.pop("use_auth_token", None)
-        return _orig_inference_init(self, *args, **kwargs)
-
-    _Inference.__init__ = _patched_inference_init
-except ImportError:
-    pass  # pyannote not installed — diarization won't be used
-
 _original_torch_load = (
     torch.serialization.load.__wrapped__
     if hasattr(torch.serialization.load, "__wrapped__")
@@ -156,6 +137,42 @@ def get_compute_type(device: str) -> str:
 
 def check_ffmpeg() -> bool:
     return shutil.which("ffmpeg") is not None
+
+
+# ---------------------------------------------------------------------------
+# pyannote.audio compatibility — some version combinations pass `token=` to
+# Inference.__init__() which doesn't accept it.  Applied lazily so that all
+# torch patches are in place before pyannote modules are imported.
+# ---------------------------------------------------------------------------
+_pyannote_patched = False
+
+
+def _patch_pyannote():
+    """Patch pyannote Inference to accept (and ignore) token kwargs."""
+    global _pyannote_patched
+    if _pyannote_patched:
+        return
+    _pyannote_patched = True
+
+    try:
+        from pyannote.audio.core.inference import Inference
+
+        orig_init = Inference.__init__
+
+        # Guard against double-patching
+        if getattr(orig_init, "_audioscribe_patched", False):
+            return
+
+        def _patched_init(self, *args, **kwargs):
+            kwargs.pop("token", None)
+            kwargs.pop("use_auth_token", None)
+            return orig_init(self, *args, **kwargs)
+
+        _patched_init._audioscribe_patched = True
+        Inference.__init__ = _patched_init
+        print("       [patch] pyannote Inference patched OK")
+    except Exception as exc:
+        print(f"       [patch] Could not patch pyannote Inference: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +280,7 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
                 progress(0.75, desc="Identifying speakers...")
                 print("[4/4] Identifying speakers...")
                 try:
+                    _patch_pyannote()
                     diarize_model = whisperx.DiarizationPipeline(
                         hf_token=token, device=device,
                     )
