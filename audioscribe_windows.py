@@ -170,9 +170,9 @@ def _patch_pyannote():
 
         _patched_init._audioscribe_patched = True
         Inference.__init__ = _patched_init
-        print("       [patch] pyannote Inference patched OK")
+        print("       [patch] pyannote Inference patched OK", flush=True)
     except Exception as exc:
-        print(f"       [patch] Could not patch pyannote Inference: {exc}")
+        print(f"       [patch] Could not patch pyannote Inference: {exc}", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ def _get_model(model_size, device, compute_type, lang_code):
     key = (model_size, device, compute_type, lang_code)
 
     if _model_cache["key"] == key and _model_cache["model"] is not None:
-        print("       Using cached model")
+        print("       Using cached model", flush=True)
         return _model_cache["model"]
 
     # Free previous model
@@ -233,32 +233,38 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
 
     token = (hf_token or "").strip() or load_token()
 
-    print(f"\n{'=' * 60}")
-    print(f"AudioScribe — Transcribing")
-    print(f"  Model       : {model_size}")
-    print(f"  Language    : {language}")
-    print(f"  Device      : {device} ({compute_type})")
-    print(f"  Diarization : {enable_diarization}")
-    print(f"  HF token    : {'present' if token else 'MISSING'}")
-    print(f"{'=' * 60}\n")
+    print(f"\n{'=' * 60}", flush=True)
+    print(f"AudioScribe — Transcribing", flush=True)
+    print(f"  Model       : {model_size}", flush=True)
+    print(f"  Language    : {language}", flush=True)
+    print(f"  Device      : {device} ({compute_type})", flush=True)
+    print(f"  Diarization : {enable_diarization}", flush=True)
+    print(f"  HF token    : {'present' if token else 'MISSING'}", flush=True)
+    print(f"{'=' * 60}\n", flush=True)
+
+    diarization_error = None  # Track diarization errors for transcript
 
     try:
         # ---- Load model (cached between runs) ----
         progress(0.05, desc="Loading model...")
-        print("[1/4] Loading model...")
+        print("[1/4] Loading model...", flush=True)
         model = _get_model(model_size, device, compute_type, lang_code)
+        print("       Model loaded OK", flush=True)
 
         # ---- Transcribe ----
         progress(0.2, desc="Transcribing audio...")
-        print("[2/4] Transcribing audio...")
+        print("[2/4] Transcribing audio...", flush=True)
         audio = whisperx.load_audio(audio_path)
+        print("       Audio loaded, running transcription...", flush=True)
         result = model.transcribe(audio, batch_size=16 if device == "cuda" else 4)
         detected_lang = result.get("language", lang_code or "unknown")
-        print(f"       Detected language: {detected_lang}")
+        seg_count = len(result.get("segments", []))
+        print(f"       Detected language: {detected_lang}", flush=True)
+        print(f"       Segments found: {seg_count}", flush=True)
 
         # ---- Align timestamps ----
         progress(0.55, desc="Aligning timestamps...")
-        print("[3/4] Aligning timestamps...")
+        print("[3/4] Aligning timestamps...", flush=True)
         try:
             align_model, metadata = whisperx.load_align_model(
                 language_code=detected_lang, device=device,
@@ -268,38 +274,52 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
                 return_char_alignments=False,
             )
             del align_model, metadata
+            print("       Alignment complete", flush=True)
         except Exception as e:
-            print(f"       Alignment skipped: {e}")
+            print(f"       Alignment skipped: {e}", flush=True)
 
         # ---- Speaker diarization (optional) ----
         if enable_diarization:
             if not token:
-                print("[4/4] Speaker ID skipped — no Hugging Face token.")
+                print("[4/4] Speaker ID skipped — no Hugging Face token.", flush=True)
                 gr.Warning("Speaker identification skipped — no Hugging Face token provided. Add your token in the settings panel.")
             else:
                 progress(0.75, desc="Identifying speakers...")
-                print("[4/4] Identifying speakers...")
+                print("[4/4] Identifying speakers...", flush=True)
                 try:
                     _patch_pyannote()
+                    print("       Loading diarization pipeline...", flush=True)
                     diarize_model = whisperx.DiarizationPipeline(
                         hf_token=token, device=device,
                     )
+                    print("       Pipeline loaded, running diarization...", flush=True)
                     diarize_segments = diarize_model(audio)
-                    print(f"       Diarize segments: {len(diarize_segments)} found")
+                    print(f"       Diarize segments: {len(diarize_segments)} found", flush=True)
                     result = whisperx.assign_word_speakers(diarize_segments, result)
                     del diarize_model, diarize_segments
-                    print("       Speaker identification complete.")
+                    print("       Speaker identification complete.", flush=True)
                 except Exception as e:
                     import traceback
-                    print(f"       Speaker ID failed: {e}")
+                    diarization_error = str(e)
+                    print(f"\n{'!' * 60}", flush=True)
+                    print(f"  SPEAKER ID FAILED: {e}", flush=True)
+                    print(f"{'!' * 60}", flush=True)
                     traceback.print_exc()
+                    print(flush=True)
                     gr.Warning(f"Speaker identification failed: {e}. Transcript will not have speaker labels.")
         else:
-            print("[4/4] Speaker diarization disabled — skipping.")
+            print("[4/4] Speaker diarization disabled — skipping.", flush=True)
 
         # ---- Build transcript ----
         progress(0.9, desc="Saving transcript...")
+        print("       Building transcript...", flush=True)
         lines = []
+
+        # Show diarization error at top of transcript so user sees it
+        if diarization_error:
+            lines.append(f"⚠ Speaker identification failed: {diarization_error}")
+            lines.append("Transcript below has no speaker labels.\n")
+
         current_speaker = None
         for seg in result.get("segments", []):
             speaker = seg.get("speaker")
@@ -321,7 +341,7 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         out_file = DOWNLOADS / f"{audio_name}_{timestamp}.txt"
         out_file.write_text(transcript, encoding="utf-8")
-        print(f"\nTranscript saved to: {out_file}\n")
+        print(f"\nTranscript saved to: {out_file}\n", flush=True)
 
         if device == "cuda":
             torch.cuda.empty_cache()
@@ -430,16 +450,70 @@ def build_ui():
 # Main
 # ---------------------------------------------------------------------------
 
+def _startup_checks():
+    """Run quick diagnostics and print results."""
+    print("  Checking dependencies...", flush=True)
+
+    # FFmpeg
+    if check_ffmpeg():
+        print("    ffmpeg        : OK", flush=True)
+    else:
+        print("    ffmpeg        : MISSING — install with: winget install FFmpeg", flush=True)
+
+    # HF token
+    token = load_token()
+    if token:
+        print(f"    HF token      : found ({len(token)} chars)", flush=True)
+    else:
+        print("    HF token      : not found — speaker ID will not work", flush=True)
+
+    # pyannote import
+    try:
+        from pyannote.audio import Pipeline
+        print("    pyannote.audio: OK", flush=True)
+    except ImportError as e:
+        print(f"    pyannote.audio: MISSING — {e}", flush=True)
+    except Exception as e:
+        print(f"    pyannote.audio: ERROR — {e}", flush=True)
+
+    # whisperx
+    try:
+        import whisperx
+        print("    whisperx      : OK", flush=True)
+    except ImportError as e:
+        print(f"    whisperx      : MISSING — {e}", flush=True)
+
+    # Test diarization pipeline creation (without actually running it)
+    if token:
+        try:
+            from pyannote.audio import Pipeline as _P
+            _p = _P.from_pretrained(
+                "pyannote/speaker-diarization-3.1",
+                use_auth_token=token,
+            )
+            del _p
+            print("    diarization   : pipeline loaded OK", flush=True)
+        except Exception as e:
+            print(f"    diarization   : FAILED — {e}", flush=True)
+            print(f"      Make sure you accepted the license at:", flush=True)
+            print(f"      https://huggingface.co/pyannote/speaker-diarization-3.1", flush=True)
+            print(f"      https://huggingface.co/pyannote/segmentation-3.0", flush=True)
+
+    print(flush=True)
+
+
 def main():
-    print("\n" + "=" * 60)
-    print("  AudioScribe — Local Audio Transcription")
-    print("  Open your browser to http://127.0.0.1:7860")
-    print("=" * 60 + "\n")
+    print("\n" + "=" * 60, flush=True)
+    print("  AudioScribe — Local Audio Transcription", flush=True)
+    print("  Open your browser to http://127.0.0.1:7860", flush=True)
+    print("=" * 60 + "\n", flush=True)
+
+    _startup_checks()
 
     if not check_ffmpeg():
-        print("WARNING: FFmpeg is not found on PATH.")
-        print("  Install: winget install FFmpeg (Windows)")
-        print("           brew install ffmpeg (macOS)\n")
+        print("WARNING: FFmpeg is not found on PATH.", flush=True)
+        print("  Install: winget install FFmpeg (Windows)", flush=True)
+        print("           brew install ffmpeg (macOS)\n", flush=True)
 
     app = build_ui()
     app.queue()
