@@ -244,6 +244,10 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
 
     diarization_error = None  # Track diarization errors for transcript
 
+    # Patch pyannote BEFORE loading model — WhisperX's VAD uses pyannote
+    # internally and will fail if the patch isn't applied first.
+    _patch_pyannote()
+
     try:
         # ---- Load model (cached between runs) ----
         progress(0.05, desc="Loading model...")
@@ -287,7 +291,6 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
                 progress(0.75, desc="Identifying speakers...")
                 print("[4/4] Identifying speakers...", flush=True)
                 try:
-                    _patch_pyannote()
                     print("       Loading diarization pipeline...", flush=True)
                     diarize_model = whisperx.DiarizationPipeline(
                         hf_token=token, device=device,
