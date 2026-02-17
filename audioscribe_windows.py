@@ -49,6 +49,25 @@ if not hasattr(torchaudio, "AudioMetaData"):
 if not hasattr(torchaudio, "list_audio_backends"):
     torchaudio.list_audio_backends = lambda: ["ffmpeg"]
 
+# ---------------------------------------------------------------------------
+# pyannote.audio compatibility — some version combinations pass `token=` to
+# Inference.__init__() which doesn't accept it.  Strip the kwarg so the
+# diarization pipeline loads without errors.
+# ---------------------------------------------------------------------------
+try:
+    from pyannote.audio.core.inference import Inference as _Inference
+
+    _orig_inference_init = _Inference.__init__
+
+    def _patched_inference_init(self, *args, **kwargs):
+        kwargs.pop("token", None)
+        kwargs.pop("use_auth_token", None)
+        return _orig_inference_init(self, *args, **kwargs)
+
+    _Inference.__init__ = _patched_inference_init
+except ImportError:
+    pass  # pyannote not installed — diarization won't be used
+
 _original_torch_load = (
     torch.serialization.load.__wrapped__
     if hasattr(torch.serialization.load, "__wrapped__")
