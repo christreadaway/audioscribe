@@ -148,31 +148,54 @@ _pyannote_patched = False
 
 
 def _patch_pyannote():
-    """Patch pyannote Inference to accept (and ignore) token kwargs."""
+    """Patch pyannote classes to bridge token kwarg mismatches.
+
+    Newer whisperx passes ``token=`` but older pyannote expects
+    ``use_auth_token=`` (or vice-versa).  We patch both Inference.__init__
+    and Pipeline.from_pretrained so the token flows through regardless of
+    which naming convention either side uses.
+    """
     global _pyannote_patched
     if _pyannote_patched:
         return
     _pyannote_patched = True
 
+    # --- Patch Inference.__init__ (used by WhisperX VAD) ---
     try:
         from pyannote.audio.core.inference import Inference
 
         orig_init = Inference.__init__
+        if not getattr(orig_init, "_audioscribe_patched", False):
+            def _patched_init(self, *args, **kwargs):
+                kwargs.pop("token", None)
+                kwargs.pop("use_auth_token", None)
+                return orig_init(self, *args, **kwargs)
 
-        # Guard against double-patching
-        if getattr(orig_init, "_audioscribe_patched", False):
-            return
-
-        def _patched_init(self, *args, **kwargs):
-            kwargs.pop("token", None)
-            kwargs.pop("use_auth_token", None)
-            return orig_init(self, *args, **kwargs)
-
-        _patched_init._audioscribe_patched = True
-        Inference.__init__ = _patched_init
-        print("       [patch] pyannote Inference patched OK", flush=True)
+            _patched_init._audioscribe_patched = True
+            Inference.__init__ = _patched_init
+            print("       [patch] pyannote Inference patched OK", flush=True)
     except Exception as exc:
         print(f"       [patch] Could not patch pyannote Inference: {exc}", flush=True)
+
+    # --- Patch Pipeline.from_pretrained (used by DiarizationPipeline) ---
+    try:
+        from pyannote.audio.core.pipeline import Pipeline
+
+        orig_from_pretrained = Pipeline.from_pretrained
+        if not getattr(orig_from_pretrained, "_audioscribe_patched", False):
+            @staticmethod
+            def _patched_from_pretrained(*args, **kwargs):
+                # Normalise: if caller passed token=, convert to use_auth_token=
+                token = kwargs.pop("token", None)
+                if token is not None and "use_auth_token" not in kwargs:
+                    kwargs["use_auth_token"] = token
+                return orig_from_pretrained(*args, **kwargs)
+
+            _patched_from_pretrained._audioscribe_patched = True
+            Pipeline.from_pretrained = _patched_from_pretrained
+            print("       [patch] pyannote Pipeline.from_pretrained patched OK", flush=True)
+    except Exception as exc:
+        print(f"       [patch] Could not patch pyannote Pipeline: {exc}", flush=True)
 
 
 # ---------------------------------------------------------------------------
