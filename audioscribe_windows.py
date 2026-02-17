@@ -239,12 +239,13 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
         if enable_diarization:
             if not token:
                 print("[4/4] Speaker ID skipped — no Hugging Face token.")
+                gr.Warning("Speaker identification skipped — no Hugging Face token provided. Add your token in the settings panel.")
             else:
                 progress(0.75, desc="Identifying speakers...")
                 print("[4/4] Identifying speakers...")
                 try:
                     diarize_model = whisperx.DiarizationPipeline(
-                        use_auth_token=token, device=device,
+                        hf_token=token, device=device,
                     )
                     diarize_segments = diarize_model(audio)
                     print(f"       Diarize segments: {len(diarize_segments)} found")
@@ -252,7 +253,10 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
                     del diarize_model, diarize_segments
                     print("       Speaker identification complete.")
                 except Exception as e:
+                    import traceback
                     print(f"       Speaker ID failed: {e}")
+                    traceback.print_exc()
+                    gr.Warning(f"Speaker identification failed: {e}. Transcript will not have speaker labels.")
         else:
             print("[4/4] Speaker diarization disabled — skipping.")
 
