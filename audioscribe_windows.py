@@ -292,8 +292,9 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
                 print("[4/4] Identifying speakers...", flush=True)
                 try:
                     print("       Loading diarization pipeline...", flush=True)
-                    diarize_model = whisperx.DiarizationPipeline(
-                        hf_token=token, device=device,
+                    from whisperx.diarize import DiarizationPipeline
+                    diarize_model = DiarizationPipeline(
+                        token=token, device=device,
                     )
                     print("       Pipeline loaded, running diarization...", flush=True)
                     diarize_segments = diarize_model(audio)
