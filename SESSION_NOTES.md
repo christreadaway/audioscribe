@@ -1,11 +1,53 @@
 # AUDIOSCRIBE - Session History
 
-**Repository:** `audioscribe`  
-**Total Sessions Logged:** 5  
-**Date Range:** 2025-02-03 to 2025-02-13  
-**Last Updated:** 2026-02-16 at 14:48 UTC
+**Repository:** `audioscribe`
+**Total Sessions Logged:** 6
+**Date Range:** 2025-02-03 to 2026-02-17
+**Last Updated:** 2026-02-17
 
 This file contains a complete history of Claude Code sessions for this repository, automatically generated from transcript files. Sessions are listed in reverse chronological order (most recent first).
+
+---
+
+## 2026-02-17 — Comprehensive Speaker Diarization Fix
+
+### What We Built
+- Deep-researched the entire pyannote.audio + whisperx API surface to find the root cause of speaker identification failures
+- Added `_pyannote_version()` — detects pyannote 3.x vs 4.x at runtime
+- Added `_pyannote_token_kwarg()` — returns correct token param name per version
+- Patched ALL 4 pyannote entry points that accept auth tokens: `Inference.__init__`, `Pipeline.from_pretrained`, `Model.from_pretrained`, `VoiceActivityDetection.__init__`
+- Replaced whisperx `DiarizationPipeline` wrapper with direct pyannote.audio calls, using correct model name and token param per version
+- Fixed `_startup_checks()` to also be version-aware and call `_patch_pyannote()` before loading pipeline
+
+### Current Status
+- Working: Transcription (whisperx), alignment, UI, model caching, torch.load patching, torchaudio compat shims
+- In Progress: Speaker diarization — comprehensive fix deployed, awaiting user testing on Windows
+- Broken: Nothing known (previous token kwarg mismatches should all be resolved)
+
+### Branch Info
+Branch: `claude/debug-speaker-identification-S0sic`
+Ready to merge: No — needs user testing on Windows first
+
+### Technical Details
+**Root Cause:** whisperx 3.8.x sends `token=` to all pyannote classes, but installed pyannote.audio 3.x expects `use_auth_token=`. There are 5+ call sites where this mismatch can crash. Previous sessions were fixing them one at a time (whack-a-mole).
+
+**Files Modified:**
+- `audioscribe_windows.py` — comprehensive version-aware patching + direct pyannote diarization
+
+**Key insight:** The pyannote.audio 3.x → 4.x breaking change renamed `use_auth_token` to `token` across the entire library. whisperx 3.8.x targets pyannote 4.x. If you have pyannote 3.x installed, every call site breaks.
+
+### Decisions Made
+- Bypass whisperx's `DiarizationPipeline` entirely — too many internal token mismatches to patch from outside
+- Call pyannote.audio directly with version-detected parameters
+- Keep patches on whisperx's internal calls (VAD, model loading) since we can't bypass those
+
+### Next Steps
+1. Test on Windows with a real audio file and HF token — confirm speaker labels appear
+2. If working, merge to main
+3. Consider pinning pyannote.audio version in requirements.txt to prevent future breakage
+
+### Questions/Blockers
+- Need user to test on their actual Windows machine with CUDA
 
 ---
 

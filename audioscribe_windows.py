@@ -147,32 +147,124 @@ def check_ffmpeg() -> bool:
 _pyannote_patched = False
 
 
+def _pyannote_version() -> int:
+    """Return the major version of the installed pyannote.audio (3 or 4)."""
+    try:
+        import pyannote.audio
+        return int(pyannote.audio.__version__.split(".")[0])
+    except Exception:
+        return 3  # conservative default
+
+
+def _pyannote_token_kwarg(token: str) -> dict:
+    """Return the correct keyword-argument dict for passing an HF token to
+    pyannote, depending on the installed version.
+
+    pyannote.audio 4.x uses ``token=``; 3.x uses ``use_auth_token=``.
+    """
+    if _pyannote_version() >= 4:
+        return {"token": token}
+    return {"use_auth_token": token}
+
+
 def _patch_pyannote():
-    """Patch pyannote Inference to accept (and ignore) token kwargs."""
+    """Patch pyannote classes so that token kwargs never cause TypeErrors.
+
+    whisperx may pass ``token=`` to pyannote classes that only accept
+    ``use_auth_token=`` (or vice-versa).  We normalise every call site so
+    the token reaches pyannote in whichever form it expects.
+
+    We also strip token/use_auth_token from Inference.__init__ which never
+    accepts either.
+    """
     global _pyannote_patched
     if _pyannote_patched:
         return
     _pyannote_patched = True
 
+    v4 = _pyannote_version() >= 4
+
+    # --- Patch Inference.__init__ (never accepts token in any version) ---
     try:
         from pyannote.audio.core.inference import Inference
 
         orig_init = Inference.__init__
+        if not getattr(orig_init, "_audioscribe_patched", False):
+            def _patched_init(self, *args, **kwargs):
+                kwargs.pop("token", None)
+                kwargs.pop("use_auth_token", None)
+                return orig_init(self, *args, **kwargs)
 
-        # Guard against double-patching
-        if getattr(orig_init, "_audioscribe_patched", False):
-            return
-
-        def _patched_init(self, *args, **kwargs):
-            kwargs.pop("token", None)
-            kwargs.pop("use_auth_token", None)
-            return orig_init(self, *args, **kwargs)
-
-        _patched_init._audioscribe_patched = True
-        Inference.__init__ = _patched_init
-        print("       [patch] pyannote Inference patched OK", flush=True)
+            _patched_init._audioscribe_patched = True
+            Inference.__init__ = _patched_init
+            print("       [patch] pyannote Inference patched OK", flush=True)
     except Exception as exc:
         print(f"       [patch] Could not patch pyannote Inference: {exc}", flush=True)
+
+    # --- Patch Pipeline.from_pretrained (token vs use_auth_token) ---
+    try:
+        from pyannote.audio.core.pipeline import Pipeline
+
+        orig_from_pretrained = Pipeline.from_pretrained
+        if not getattr(orig_from_pretrained, "_audioscribe_patched", False):
+            @staticmethod
+            def _patched_from_pretrained(*args, **kwargs):
+                tok = kwargs.pop("token", None) or kwargs.pop("use_auth_token", None)
+                if tok is not None:
+                    if v4:
+                        kwargs["token"] = tok
+                    else:
+                        kwargs["use_auth_token"] = tok
+                return orig_from_pretrained(*args, **kwargs)
+
+            _patched_from_pretrained._audioscribe_patched = True
+            Pipeline.from_pretrained = _patched_from_pretrained
+            print("       [patch] pyannote Pipeline.from_pretrained patched OK", flush=True)
+    except Exception as exc:
+        print(f"       [patch] Could not patch pyannote Pipeline: {exc}", flush=True)
+
+    # --- Patch Model.from_pretrained (token vs use_auth_token) ---
+    try:
+        from pyannote.audio.core.model import Model
+
+        orig_model_fp = Model.from_pretrained
+        if not getattr(orig_model_fp, "_audioscribe_patched", False):
+            @classmethod
+            def _patched_model_fp(cls, *args, **kwargs):
+                tok = kwargs.pop("token", None) or kwargs.pop("use_auth_token", None)
+                if tok is not None:
+                    if v4:
+                        kwargs["token"] = tok
+                    else:
+                        kwargs["use_auth_token"] = tok
+                return orig_model_fp.__func__(cls, *args, **kwargs)
+
+            _patched_model_fp._audioscribe_patched = True
+            Model.from_pretrained = _patched_model_fp
+            print("       [patch] pyannote Model.from_pretrained patched OK", flush=True)
+    except Exception as exc:
+        print(f"       [patch] Could not patch pyannote Model: {exc}", flush=True)
+
+    # --- Patch VoiceActivityDetection.__init__ (token vs use_auth_token) ---
+    try:
+        from pyannote.audio.pipelines import VoiceActivityDetection
+
+        orig_vad_init = VoiceActivityDetection.__init__
+        if not getattr(orig_vad_init, "_audioscribe_patched", False):
+            def _patched_vad_init(self, *args, **kwargs):
+                tok = kwargs.pop("token", None) or kwargs.pop("use_auth_token", None)
+                if tok is not None:
+                    if v4:
+                        kwargs["token"] = tok
+                    else:
+                        kwargs["use_auth_token"] = tok
+                return orig_vad_init(self, *args, **kwargs)
+
+            _patched_vad_init._audioscribe_patched = True
+            VoiceActivityDetection.__init__ = _patched_vad_init
+            print("       [patch] pyannote VoiceActivityDetection patched OK", flush=True)
+    except Exception as exc:
+        print(f"       [patch] Could not patch pyannote VAD: {exc}", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -292,15 +384,50 @@ def transcribe(audio_path, language, model_size, enable_diarization, hf_token,
                 print("[4/4] Identifying speakers...", flush=True)
                 try:
                     print("       Loading diarization pipeline...", flush=True)
-                    from whisperx.diarize import DiarizationPipeline
-                    diarize_model = DiarizationPipeline(
-                        token=token, device=device,
+                    from pyannote.audio import Pipeline as PyannotePipeline
+                    import numpy as np, pandas as pd
+
+                    # Use pyannote directly — avoids whisperx wrapper
+                    # token kwarg mismatch issues.
+                    diar_model_name = (
+                        "pyannote/speaker-diarization-3.1"
+                        if _pyannote_version() < 4
+                        else "pyannote/speaker-diarization-community-1"
                     )
+                    token_kw = _pyannote_token_kwarg(token)
+                    diar_pipeline = PyannotePipeline.from_pretrained(
+                        diar_model_name, **token_kw,
+                    ).to(torch.device(device))
+
                     print("       Pipeline loaded, running diarization...", flush=True)
-                    diarize_segments = diarize_model(audio)
+                    # pyannote expects {"waveform": tensor, "sample_rate": int}
+                    SAMPLE_RATE = 16000
+                    if isinstance(audio, np.ndarray):
+                        audio_input = {
+                            "waveform": torch.from_numpy(audio[None, :]),
+                            "sample_rate": SAMPLE_RATE,
+                        }
+                    else:
+                        audio_input = audio
+
+                    diarization = diar_pipeline(audio_input)
+
+                    # Convert pyannote Annotation → DataFrame that
+                    # whisperx.assign_word_speakers expects.
+                    rows = []
+                    for turn, _, speaker in diarization.itertracks(yield_label=True):
+                        rows.append({
+                            "segment": turn,
+                            "label": speaker,
+                            "speaker": speaker,
+                            "start": turn.start,
+                            "end": turn.end,
+                        })
+                    diarize_segments = pd.DataFrame(rows)
                     print(f"       Diarize segments: {len(diarize_segments)} found", flush=True)
+
                     result = whisperx.assign_word_speakers(diarize_segments, result)
-                    del diarize_model, diarize_segments
+                    del diar_pipeline, diarization, diarize_segments
                     print("       Speaker identification complete.", flush=True)
                 except Exception as e:
                     import traceback
@@ -489,14 +616,18 @@ def _startup_checks():
 
     # Test diarization pipeline creation (without actually running it)
     if token:
+        _patch_pyannote()
         try:
             from pyannote.audio import Pipeline as _P
-            _p = _P.from_pretrained(
-                "pyannote/speaker-diarization-3.1",
-                use_auth_token=token,
+            diar_model_name = (
+                "pyannote/speaker-diarization-3.1"
+                if _pyannote_version() < 4
+                else "pyannote/speaker-diarization-community-1"
             )
+            token_kw = _pyannote_token_kwarg(token)
+            _p = _P.from_pretrained(diar_model_name, **token_kw)
             del _p
-            print("    diarization   : pipeline loaded OK", flush=True)
+            print(f"    diarization   : pipeline loaded OK ({diar_model_name})", flush=True)
         except Exception as e:
             print(f"    diarization   : FAILED — {e}", flush=True)
             print(f"      Make sure you accepted the license at:", flush=True)
