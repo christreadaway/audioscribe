@@ -32,7 +32,7 @@ This file contains a complete history of Claude Code sessions for this repositor
 - "Single File" tab: existing `gr.Audio` component + "Transcribe" button
 - "Batch Upload" tab: `gr.File(file_count="multiple")` + "Transcribe All" button
 - Settings (language, model, speaker ID, token) shared below tabs — apply to both modes
-- File type filtering on batch upload: .mp3, .wav, .m4a, .aac, .flac, .ogg, .wma, .webm, .mp4
+- Removed `file_types` filter — was blocking multi-select in OS file dialog on some browsers; FFmpeg handles format validation anyway
 
 **Files Modified:**
 - `audioscribe_windows.py` — Added AUDIO_EXTENSIONS, _BatchProgress, transcribe_batch(), tabbed UI
@@ -54,6 +54,7 @@ Branch: `claude/batch-file-upload-2gYSk` → merged to `main`
 - Added AUDIO_EXTENSIONS constant for batch file type filtering
 - Both versions (Windows + Mac) get batch support for consistency
 - Added `.gitignore` for `__pycache__/` and `.venv/`
+- Removed `file_types` parameter from `gr.File` — was preventing multi-select in the file picker on Windows
 
 ### Next Steps
 1. User tests batch upload on Windows — upload 2-3 audio files, confirm all transcripts saved

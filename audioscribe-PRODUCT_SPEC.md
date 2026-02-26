@@ -39,7 +39,7 @@
 - Per-file progress tracking in the UI progress bar
 - Each file gets its own transcript saved to ~/Downloads/
 - Combined output view with clear file-by-file headers
-- Supported formats: MP3, WAV, M4A, AAC, FLAC, OGG, WMA, WEBM, MP4
+- Supports any audio format FFmpeg can decode (MP3, WAV, M4A, AAC, FLAC, OGG, WMA, WEBM, MP4, etc.)
 - One bad file doesn't stop the batch — errors reported per-file
 
 ### Speaker Identification (Diarization)
