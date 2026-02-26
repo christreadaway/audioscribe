@@ -342,7 +342,6 @@ def create_interface():
                         file_input = gr.File(
                             label="Upload Audio Files (mp3, wav, m4a, etc.)",
                             file_count="multiple",
-                            type="filepath",
                         )
                         batch_btn = gr.Button(
                             "Transcribe All",
