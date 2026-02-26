@@ -604,10 +604,9 @@ def build_ui():
                         )
                     with gr.TabItem("Batch Upload"):
                         file_input = gr.File(
-                            label="Upload Audio Files",
+                            label="Upload Audio Files (mp3, wav, m4a, etc.)",
                             file_count="multiple",
                             type="filepath",
-                            file_types=AUDIO_EXTENSIONS,
                         )
                         batch_btn = gr.Button(
                             "Transcribe All", variant="primary",
