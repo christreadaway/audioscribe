@@ -9,8 +9,11 @@
 ## What's Working
 - Gradio web UI at http://127.0.0.1:7860
 - Audio transcription via WhisperX (tiny through large-v3 models)
-- **Batch file upload** — upload multiple files, process all sequentially (NEW)
+- **Batch file upload** — upload multiple files, process all sequentially
 - Tabbed UI: Single File + Batch Upload modes
+- Dark mode default (via JS injection)
+- Version number displayed in header (v2.1.0)
+- Stale-server auto-kill on startup (Windows)
 - 21 languages + auto-detect
 - Timestamp alignment
 - Model caching between transcriptions (works across batch files too)
@@ -27,7 +30,7 @@
 
 ## What's In Progress
 - Speaker diarization — comprehensive fix deployed, awaiting Windows testing
-- Batch upload — implemented, awaiting user testing on Windows
+- Batch upload — implemented, **user seeing old cached page in browser** — needs hard refresh (Ctrl+Shift+R) after relaunch
 
 ## Tech Stack
 - Python 3.11, WhisperX, pyannote.audio 3.x, Gradio 3.50.2, ffmpeg
@@ -35,15 +38,15 @@
 - See CLAUDE.md for full details
 
 ## Next Steps
-1. User tests batch upload on Windows with real audio files
-2. User tests speaker diarization on Windows with HF token
-3. If working → merge branch to main
-4. Pin pyannote.audio version in requirements.txt to prevent future breakage
+1. User double-clicks desktop icon, then hard-refreshes browser (Ctrl+Shift+R) to see v2.1.0 UI with tabs
+2. User tests batch upload on Windows with real audio files
+3. User tests speaker diarization on Windows with HF token
+4. If working → merge branch to main
 
 ## Blockers
-- None — features are deployed, just need testing
+- Browser cache was serving old page — hard refresh required after relaunch
 
 ## Last Session
 - **Date:** 2026-02-26
 - **Branch:** `claude/batch-file-upload-2gYSk`
-- **Summary:** Added batch file upload feature to both Windows and Mac versions. Tabbed UI with Single File and Batch Upload modes. Each file processed sequentially with per-file progress tracking. All transcripts saved individually to ~/Downloads/.
+- **Summary:** Debugged why user wasn't seeing batch upload UI. Root cause: old Gradio server process was holding port 7860 (or browser cache). Added stale-server auto-kill, dark mode, version display. Confirmed code on disk is correct (v2.1.0 with tabs). User needs to relaunch app and hard-refresh browser.
