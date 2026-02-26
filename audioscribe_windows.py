@@ -16,6 +16,10 @@ import shutil
 import pathlib
 import datetime
 import warnings
+import subprocess
+import sys
+
+APP_VERSION = "2.1.0"  # bump when UI changes — confirms correct code is running
 
 warnings.filterwarnings("ignore")
 
@@ -580,13 +584,46 @@ def transcribe_batch(files, language, model_size, enable_diarization, hf_token,
 
 
 # ---------------------------------------------------------------------------
+# Kill stale server on port 7860 (Windows)
+# ---------------------------------------------------------------------------
+
+def _kill_stale_server():
+    """Kill any leftover process on port 7860 so the new server can bind."""
+    if sys.platform != "win32":
+        return
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano"], capture_output=True, text=True, timeout=5,
+        )
+        for line in result.stdout.splitlines():
+            if ":7860" in line and "LISTENING" in line:
+                pid = line.split()[-1]
+                print(f"  Killing stale server on port 7860 (PID {pid})...", flush=True)
+                subprocess.run(
+                    ["taskkill", "/PID", pid, "/F"],
+                    capture_output=True, timeout=5,
+                )
+    except Exception as exc:
+        print(f"  Could not check for stale server: {exc}", flush=True)
+
+
+# ---------------------------------------------------------------------------
 # Gradio UI
 # ---------------------------------------------------------------------------
 
+# Force dark mode regardless of browser / incognito settings
+_FORCE_DARK_JS = """
+() => {
+    document.body.classList.add('dark');
+    document.documentElement.style.setProperty('color-scheme', 'dark');
+}
+"""
+
+
 def build_ui():
-    with gr.Blocks(title="AudioScribe", theme=gr.themes.Soft()) as app:
+    with gr.Blocks(title="AudioScribe", theme=gr.themes.Soft(), js=_FORCE_DARK_JS) as app:
         gr.Markdown(
-            "# AudioScribe\n"
+            f"# AudioScribe v{APP_VERSION}\n"
             "Local audio transcription with optional speaker identification."
         )
 
@@ -731,9 +768,12 @@ def _startup_checks():
 
 def main():
     print("\n" + "=" * 60, flush=True)
-    print("  AudioScribe — Local Audio Transcription", flush=True)
+    print(f"  AudioScribe v{APP_VERSION} — Local Audio Transcription", flush=True)
     print("  Open your browser to http://127.0.0.1:7860", flush=True)
     print("=" * 60 + "\n", flush=True)
+
+    # Kill any leftover server BEFORE starting ours
+    _kill_stale_server()
 
     _startup_checks()
 
