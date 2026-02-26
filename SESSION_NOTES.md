@@ -43,25 +43,25 @@ This file contains a complete history of Claude Code sessions for this repositor
 - ✅ Single-file mode preserved (backward compatible)
 - ✅ Python syntax verified clean
 - ✅ All key functions verified via AST analysis
-- 🚧 Needs user testing on Windows with real audio files
+- ✅ Merged to main, old branch deleted
 
 ### Branch Info
-Branch: `claude/batch-file-upload-2gYSk`
-Ready to merge: Yes — after user confirms batch upload works on their Windows machine
+Branch: `claude/batch-file-upload-2gYSk` → merged to `main`
 
 ### Decisions Made
 - Used tabbed UI rather than replacing the Audio component — preserves audio preview for single-file mode
 - Reused existing `transcribe()` via `_BatchProgress` wrapper rather than extracting core logic — minimizes changes and risk
 - Added AUDIO_EXTENSIONS constant for batch file type filtering
 - Both versions (Windows + Mac) get batch support for consistency
+- Added `.gitignore` for `__pycache__/` and `.venv/`
 
 ### Next Steps
 1. User tests batch upload on Windows — upload 2-3 audio files, confirm all transcripts saved
-2. If working, merge to main
+2. Test speaker diarization on Windows with HF token (from Feb 17 fix)
 3. Consider adding batch progress summary to terminal output
 
 ### Questions/Blockers
-- None — implementation is complete, just needs real-world testing
+- None — merged to main, ready for user testing
 
 ---
 
