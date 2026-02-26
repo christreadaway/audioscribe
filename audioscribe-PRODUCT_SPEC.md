@@ -1,77 +1,82 @@
 # Audio Scribe - Product Specification
 
-**Repository:** `audioscribe`  
-**Filename:** `audioscribe-PRODUCT_SPEC.md`  
-**Last Updated:** 2026-02-16 at 15:10 UTC
+**Repository:** `audioscribe`
+**Filename:** `audioscribe-PRODUCT_SPEC.md`
+**Last Updated:** 2026-02-26
 
 ---
 
 ## What This Is
 
-**Audio Scribe** - Audio transcription with speaker diarization
+**Audio Scribe** — Local audio transcription with speaker diarization. No data leaves your machine.
 
 ## Who It's For
 
-**Primary Users:** Content creators, researchers, meeting facilitators
+**Primary Users:** Content creators, researchers, meeting facilitators, anyone who needs audio-to-text locally.
 
 ## Tech Stack
 
-Python, audio processing, speaker identification
+- **Language:** Python 3.11
+- **Transcription:** WhisperX (ctranslate2 backend)
+- **Speaker ID:** pyannote.audio 3.x (requires HuggingFace token)
+- **UI:** Gradio 3.50.2 web interface (http://127.0.0.1:7860)
+- **Audio:** ffmpeg (must be installed)
+- **GPU:** CUDA on Windows, CPU fallback on Mac (MPS NOT supported by ctranslate2)
 
 ---
 
 ## Core Features
 
-The following features have been implemented based on development sessions:
+### Audio Transcription
+- WhisperX-powered local transcription — no cloud, no data sharing
+- Model sizes: tiny, base, small, medium, large-v2, large-v3
+- 21 languages + auto-detect
+- Timestamp alignment via WhisperX alignment models
 
-1. - Added comprehensive debug logging showing model, language, device, diarization status, HF token presence
-2. - Added logs at each stage: "Speaker ID skipped", "Diarize segments: N found"
-3. - Added monkey-patch in audioscribe_windows.py that re-creates missing AudioMetaData class and list_audio_backends function
-4. - Added requirements.txt for one-command install
-5. 10. Removed os, sys, time; added shutil for ffmpeg detection
-6. 3. Added _get_model() with module-level cache - Same model/settings = instant reuse instead of reloading from disk
-7. 4. Added gr.Progress() updates - Shows progress bar at each stage (Loading model â†’ Transcribing â†’ Aligning â†’ Identifying speakers â†’ Saving)
-8. 5. Added check_ffmpeg() using shutil.which() - Clear install message if missing, startup warning in console
-9. 7. Added DOWNLOADS.mkdir(exist_ok=True) before writing transcript
-10. 9. Added explicit del align_model, del diarize_model after use
-11. Added. Your CLAUDE.md now includes 5 new sections:
-12. Added. Your global CLAUDE.md now includes:
-13. Also my token should not be out there on the internet... it rebuilt with the token included.
-14. Claude: Created global Claude code instructions file
-15. Created PROJECT_STATUS.md - Documented project state and quick start
-16. Created Python virtual environment (.venv/)
-17. Created audioscribe_mac.py - Full transcription app with Gradio web UI
-18. Created audioscribe_mac.py with all features from the README:
-19. Done. Your global CLAUDE.md file is now created at /home/user/.claude/CLAUDE.md.
-20. Fix: Added app.queue() before app.launch() - required for gr.Progress() in Gradio 3.50.2
-21. Fixed Gradio queue error - Added .queue() for progress tracking support
-22. Python 3.14 is too new - many packages (pillow, numpy) don't have pre-built wheels for it yet
-23. The virtual environment was created in my sandbox environment, not on your Mac. Let me give you the commands to set it up on your machine:
-24. Updated README.md - Added correct dependency versions and Python version notes
-25. [Created AudioScribe_Windows.bat - double-click launcher]
+### Batch File Upload (NEW — 2026-02-26)
+- Upload multiple audio files at once via the "Batch Upload" tab
+- Files processed sequentially — queue up overnight jobs
+- Per-file progress tracking in the UI progress bar
+- Each file gets its own transcript saved to ~/Downloads/
+- Combined output view with clear file-by-file headers
+- Supported formats: MP3, WAV, M4A, AAC, FLAC, OGG, WMA, WEBM, MP4
+- One bad file doesn't stop the batch — errors reported per-file
 
----
+### Speaker Identification (Diarization)
+- Identifies who said what using pyannote.audio
+- Requires free HuggingFace account + token
+- Version-aware patching: works with both pyannote 3.x and 4.x
+- Direct pyannote.audio calls (bypasses whisperx wrapper for reliability)
+- Token saved locally at ~/.audioscribe_token.txt
 
-## Technical Implementation
+### User Interface
+- Gradio web UI with Soft theme
+- Tabbed input: Single File (with audio preview) and Batch Upload
+- Language selection dropdown (21 languages + auto-detect)
+- Model size selector with guidance
+- Speaker ID toggle with collapsible token settings
+- Progress bar with stage descriptions
+- Transcript output with copy button (Mac)
+- Auto-save to ~/Downloads/ with timestamps
 
-Key technical details from implementation:
-
-- - Added monkey-patch in audioscribe_windows.py that re-creates missing AudioMetaData class and list_audio_backends function
-- What happened: WhisperX uses ctranslate2 under the hood, which only supports CUDA (NVIDIA) and CPU. Apple's MPS GPU isn't supported yet. The fix falls back to CPU on Mac.
-- Corrected MPS note (not supported, uses CPU)
-- The whisperx API uses a different parameter name. Let me check and fix:
-- Fixed. whisperx uses hf_token as the parameter name. Pull and try again:
-- Speaker diarization: Uses hf_token=hf_token parameter
-- Gradio: Uses .queue().launch() for progress tracking
+### Performance & Reliability
+- Model caching between transcriptions (reuses loaded model)
+- CUDA GPU acceleration on Windows, CPU fallback on Mac
+- torch.load patching for PyTorch 2.6+ compatibility
+- torchaudio AudioMetaData/list_audio_backends shims for torchaudio 2.8+
+- FFmpeg detection with helpful install messages
+- Startup diagnostics (checks all dependencies)
+- Comprehensive error handling with user-friendly messages
 
 ---
 
 ## Architecture & Design Decisions
 
-Key decisions made during development:
-
-- All clean - PDF covers: what AudioScribe does, architecture, dependencies, all 3 known issues, correct setup steps (Python 3.11, venv, gradio==3.50.2, FFmpeg), and what to do next.
-
+- **Two platform files:** `audioscribe_windows.py` (comprehensive, with compat patches) and `audioscribe_mac.py` (simpler)
+- **Windows launcher:** `AudioScribe_Windows.bat` for double-click desktop launch
+- **Batch via reuse:** `transcribe_batch()` reuses `transcribe()` per-file via `_BatchProgress` wrapper — zero code duplication
+- **Pyannote patching:** Runtime version detection + monkey-patching of 4 pyannote entry points for token parameter compatibility
+- **No cloud dependency:** Everything runs locally. HF token only needed for speaker ID model download.
 
 ---
 
@@ -97,5 +102,4 @@ Claude will:
 2. Update `audioscribe-PRODUCT_SPEC.md` with new features/decisions
 3. Commit both files together
 
-**Never manually edit this file** - it's maintained automatically from session notes.
-
+**Never manually edit this file** — it's maintained automatically from session notes.

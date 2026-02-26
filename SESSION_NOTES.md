@@ -1,11 +1,67 @@
 # AUDIOSCRIBE - Session History
 
 **Repository:** `audioscribe`
-**Total Sessions Logged:** 6
-**Date Range:** 2025-02-03 to 2026-02-17
-**Last Updated:** 2026-02-17
+**Total Sessions Logged:** 7
+**Date Range:** 2025-02-03 to 2026-02-26
+**Last Updated:** 2026-02-26
 
 This file contains a complete history of Claude Code sessions for this repository, automatically generated from transcript files. Sessions are listed in reverse chronological order (most recent first).
+
+---
+
+## 2026-02-26 — Batch File Upload Feature
+
+### What We Built
+- Added batch file upload support to both Windows and Mac versions
+- Users can now upload multiple audio files at once and process them all sequentially
+- Designed for overnight/unattended batch processing of queued files
+- UI updated with tabbed interface: "Single File" (original) and "Batch Upload" (new)
+- Each file in the batch gets its own transcript saved to ~/Downloads/
+- Combined output shows all transcripts with clear file-by-file headers
+- Progress bar tracks overall batch progress (file X of Y)
+
+### Technical Details
+**Architecture:**
+- Created `_BatchProgress` helper class that wraps `gr.Progress()` to scope progress updates to a slice of the overall batch (each file gets proportional progress tracking)
+- `transcribe_batch()` reuses the existing `transcribe()` function for each file — zero code duplication of transcription logic
+- Normalizes file paths defensively to handle different Gradio return types (strings, temp-file objects, etc.)
+- Success/failure tracked per-file — one bad file doesn't stop the batch
+
+**UI Changes:**
+- `gr.Tabs()` with two tab items inside the left column
+- "Single File" tab: existing `gr.Audio` component + "Transcribe" button
+- "Batch Upload" tab: `gr.File(file_count="multiple")` + "Transcribe All" button
+- Settings (language, model, speaker ID, token) shared below tabs — apply to both modes
+- File type filtering on batch upload: .mp3, .wav, .m4a, .aac, .flac, .ogg, .wma, .webm, .mp4
+
+**Files Modified:**
+- `audioscribe_windows.py` — Added AUDIO_EXTENSIONS, _BatchProgress, transcribe_batch(), tabbed UI
+- `audioscribe_mac.py` — Added _BatchProgress, transcribe_batch(), tabbed UI
+
+### Current Status
+- ✅ Batch file upload implemented (Windows + Mac)
+- ✅ Single-file mode preserved (backward compatible)
+- ✅ Python syntax verified clean
+- ✅ All key functions verified via AST analysis
+- 🚧 Needs user testing on Windows with real audio files
+
+### Branch Info
+Branch: `claude/batch-file-upload-2gYSk`
+Ready to merge: Yes — after user confirms batch upload works on their Windows machine
+
+### Decisions Made
+- Used tabbed UI rather than replacing the Audio component — preserves audio preview for single-file mode
+- Reused existing `transcribe()` via `_BatchProgress` wrapper rather than extracting core logic — minimizes changes and risk
+- Added AUDIO_EXTENSIONS constant for batch file type filtering
+- Both versions (Windows + Mac) get batch support for consistency
+
+### Next Steps
+1. User tests batch upload on Windows — upload 2-3 audio files, confirm all transcripts saved
+2. If working, merge to main
+3. Consider adding batch progress summary to terminal output
+
+### Questions/Blockers
+- None — implementation is complete, just needs real-world testing
 
 ---
 
