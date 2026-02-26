@@ -33,7 +33,7 @@
 - 21 languages + auto-detect
 - Timestamp alignment via WhisperX alignment models
 
-### Batch File Upload (NEW — 2026-02-26)
+### Batch File Upload
 - Upload multiple audio files at once via the "Batch Upload" tab
 - Files processed sequentially — queue up overnight jobs
 - Per-file progress tracking in the UI progress bar
