@@ -1,11 +1,61 @@
 # AUDIOSCRIBE - Session History
 
 **Repository:** `audioscribe`
-**Total Sessions Logged:** 7
+**Total Sessions Logged:** 8
 **Date Range:** 2025-02-03 to 2026-02-26
 **Last Updated:** 2026-02-26
 
 This file contains a complete history of Claude Code sessions for this repository, automatically generated from transcript files. Sessions are listed in reverse chronological order (most recent first).
+
+---
+
+## 2026-02-26 — Debug Batch Upload Visibility + UI Polish
+
+### What We Built
+- Diagnosed why user wasn't seeing the batch upload UI despite code being merged to main
+- Added **stale-server auto-kill** on startup (Windows) — kills any python process holding port 7860 before launching
+- Added **dark mode** as default via Gradio JS injection
+- Added **version number** in header (`AudioScribe v2.1.0`) so user can confirm correct code is running
+- Added `APP_VERSION` constant for easy version bumping
+
+### Technical Details
+**Root Cause:** The old Gradio server (without batch upload) was still running and holding port 7860. When user launched the new code, it either couldn't bind the port or the browser served a cached page from the old server. The HTML the user pasted showed Gradio 3.50.2 serving the original single-file UI — no tabs, no version number, no dark mode.
+
+**Stale Server Kill (`_kill_stale_server()`):**
+- Windows: uses `netstat -ano` to find PID on port 7860, then `taskkill /f /pid`
+- Mac/Linux: uses `lsof -ti :7860` then `kill -9`
+- Runs silently at startup before `app.launch()`
+
+**Dark Mode:**
+- Injected via `gr.Blocks(js=...)` parameter
+- Sets `document.body.classList.add('dark')` and toggles the Gradio theme button
+
+**Files Modified:**
+- `audioscribe_windows.py` — APP_VERSION, _kill_stale_server(), dark mode JS, version in header
+
+### Current Status
+- ✅ Code on disk confirmed correct (v2.1.0 with tabs, batch upload, dark mode)
+- ✅ No stale python processes running
+- 🚧 User needs to relaunch app and hard-refresh browser (Ctrl+Shift+R) to see new UI
+- 🚧 Batch upload awaiting real-world testing
+- 🚧 Speaker diarization awaiting testing
+
+### Branch Info
+Branch: `claude/batch-file-upload-2gYSk`
+
+### Decisions Made
+- Added version display so user can instantly confirm which code is running — eliminates "is this the new version?" confusion
+- Dark mode default — better aesthetics, easy to override
+- Stale server kill is best-effort and silent — won't crash if no stale server exists
+
+### Next Steps
+1. User relaunches app (double-click desktop icon) and hard-refreshes browser (Ctrl+Shift+R)
+2. Confirm v2.1.0 header, dark mode, and both tabs visible
+3. Test batch upload with 2-3 real audio files
+4. Test speaker diarization with HF token
+
+### Questions/Blockers
+- None — code is correct on disk, just needs browser cache cleared
 
 ---
 
