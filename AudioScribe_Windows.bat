@@ -9,24 +9,26 @@ echo.
 cd /d "%~dp0"
 echo Working directory: %cd%
 
-:: Activate virtual environment
-if exist ".venv\Scripts\activate.bat" (
+:: Activate virtual environment (check both venv and .venv)
+if exist "venv\Scripts\activate.bat" (
+    call venv\Scripts\activate.bat
+) else if exist ".venv\Scripts\activate.bat" (
     call .venv\Scripts\activate.bat
 ) else (
     echo ERROR: Virtual environment not found.
-    echo Please create it first with:  py -3.11 -m venv .venv
+    echo Please create it first with:  py -3.11 -m venv venv
     echo Then install dependencies:    pip install -r requirements.txt
     pause
     exit /b 1
 )
 
 :: Verify we're using the venv Python
-where python | findstr /i ".venv" >nul 2>&1
+where python | findstr /i "venv" >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Virtual environment did not activate correctly.
-    echo Try deleting .venv and recreating it:
-    echo   py -3.11 -m venv .venv
-    echo   .venv\Scripts\activate
+    echo Try deleting venv and recreating it:
+    echo   py -3.11 -m venv venv
+    echo   venv\Scripts\activate
     echo   pip install -r requirements.txt
     pause
     exit /b 1
