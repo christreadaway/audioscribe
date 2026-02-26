@@ -235,6 +235,74 @@ def transcribe(
         return error_msg, ""
 
 
+# ---------------------------------------------------------------------------
+# Batch transcription
+# ---------------------------------------------------------------------------
+
+class _BatchProgress:
+    """Wraps a gr.Progress to scope updates to a slice of the overall batch."""
+
+    def __init__(self, parent, offset, scale):
+        self._parent = parent
+        self._offset = offset
+        self._scale = scale
+
+    def __call__(self, fraction, desc=""):
+        self._parent(self._offset + fraction * self._scale, desc=desc)
+
+    def tqdm(self, *args, **kwargs):
+        return args[0] if args else iter([])
+
+
+def transcribe_batch(files, language, model_size, enable_diarization, hf_token,
+                     progress=gr.Progress()):
+    """Transcribe multiple audio files in sequence (batch mode)."""
+    if not files:
+        return "Please upload one or more audio files.", ""
+
+    # Normalise file paths
+    paths = []
+    for f in files:
+        if isinstance(f, str):
+            paths.append(f)
+        elif hasattr(f, "name"):
+            paths.append(f.name)
+        else:
+            paths.append(str(f))
+
+    total = len(paths)
+    results = []
+    saved = []
+    success_count = 0
+
+    print(f"\n{'='*60}")
+    print(f"AudioScribe — Batch Mode: {total} file(s)")
+    print(f"{'='*60}\n")
+
+    for idx, fp in enumerate(paths):
+        name = Path(fp).name
+        sub = _BatchProgress(progress, idx / total, 1.0 / total)
+
+        try:
+            transcript, status = transcribe(fp, language, model_size,
+                                            enable_diarization, hf_token, sub)
+            results.append(f"{'='*60}\n{name}\n{'='*60}\n\n{transcript}")
+            if status:
+                saved.append(status)
+            if not transcript.startswith("Error") and "Unsupported" not in transcript:
+                success_count += 1
+        except Exception as e:
+            results.append(f"{'='*60}\n{name}\n{'='*60}\n\nERROR: {e}")
+
+    progress(1.0, desc=f"Done! {success_count}/{total} files processed.")
+    header = (
+        f"BATCH COMPLETE: {success_count}/{total} files transcribed.\n"
+        f"All transcripts saved to ~/Downloads/\n\n"
+    )
+    save_summary = f"{success_count} transcript(s) saved to ~/Downloads/"
+    return header + "\n\n".join(results), save_summary
+
+
 def create_interface():
     """Create the Gradio web interface."""
 
@@ -258,11 +326,30 @@ def create_interface():
 
         with gr.Row():
             with gr.Column(scale=1):
-                audio_input = gr.Audio(
-                    label="Upload Audio File",
-                    type="filepath",
-                    sources=["upload"],
-                )
+                with gr.Tabs():
+                    with gr.TabItem("Single File"):
+                        audio_input = gr.Audio(
+                            label="Upload Audio File",
+                            type="filepath",
+                            sources=["upload"],
+                        )
+                        transcribe_btn = gr.Button(
+                            "Transcribe",
+                            variant="primary",
+                            size="lg",
+                        )
+                    with gr.TabItem("Batch Upload"):
+                        file_input = gr.File(
+                            label="Upload Audio Files",
+                            file_count="multiple",
+                            type="filepath",
+                            file_types=AUDIO_FORMATS,
+                        )
+                        batch_btn = gr.Button(
+                            "Transcribe All",
+                            variant="primary",
+                            size="lg",
+                        )
 
                 language = gr.Dropdown(
                     choices=list(LANGUAGES.keys()),
@@ -313,12 +400,6 @@ def create_interface():
                         outputs=[token_status],
                     )
 
-                transcribe_btn = gr.Button(
-                    "Transcribe",
-                    variant="primary",
-                    size="lg",
-                )
-
             with gr.Column(scale=2):
                 output_text = gr.Textbox(
                     label="Transcript",
@@ -343,6 +424,17 @@ def create_interface():
             ],
             outputs=[output_text, save_status],
         )
+        batch_btn.click(
+            fn=transcribe_batch,
+            inputs=[
+                file_input,
+                language,
+                model_size,
+                enable_diarization,
+                hf_token,
+            ],
+            outputs=[output_text, save_status],
+        )
 
         gr.Markdown(
             """
@@ -352,6 +444,7 @@ def create_interface():
             - Watch the terminal for progress updates
             - Transcripts are saved to your Downloads folder
             - Speaker identification works best on clear audio with distinct voices
+            - **Batch mode:** Use the Batch Upload tab to queue multiple files at once
 
             **Supported formats:** MP3, WAV, M4A, AAC, FLAC, OGG, WMA
             """
